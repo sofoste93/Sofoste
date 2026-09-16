@@ -42,8 +42,102 @@ data class StudentMePayload(
 @Serializable
 data class StudentOverview(
     val lessons: Int,
+    val upcoming: Int = 0,
     val unread: Int,
     @SerialName("payments_due") val paymentsDue: Int,
     @SerialName("amount_due_cents") val amountDueCents: Int,
     @SerialName("has_avatar") val hasAvatar: Boolean,
 )
+
+@Serializable
+data class StudentAgendaPayload(
+    val items: List<StudentAgendaItem>,
+    val from: String,
+    val to: String,
+    val truncated: Boolean = false,
+)
+
+@Serializable
+data class StudentAgendaItem(
+    val id: String,
+    @SerialName("session_date") val sessionDate: String,
+    @SerialName("start_time") val startTime: String? = null,
+    @SerialName("duration_minutes") val durationMinutes: Int,
+    val status: String,
+)
+
+@Serializable
+data class StudentLessonPayload(
+    val items: List<StudentLessonItem>,
+    @SerialName("next_before") val nextBefore: String? = null,
+)
+
+@Serializable
+data class StudentLessonItem(
+    val id: String,
+    val title: String,
+    val summary: String,
+    val progress: String,
+    val practice: String,
+    val revision: Int,
+    @SerialName("published_at") val publishedAt: String,
+    @SerialName("session_date") val sessionDate: String,
+)
+
+@Serializable
+data class StudentActivityPayload(
+    val items: List<StudentActivityItem>,
+    @SerialName("next_before") val nextBefore: String? = null,
+)
+
+@Serializable
+data class StudentActivityItem(
+    val id: String,
+    @SerialName("publication_id") val publicationId: String,
+    @SerialName("read_at") val readAt: String? = null,
+    @SerialName("created_at") val createdAt: String,
+    val type: String,
+)
+
+@Serializable
+data class StudentBillingPayload(
+    val profile: StudentBillingProfile? = null,
+    val items: List<StudentPaymentItem>,
+    @SerialName("next_before") val nextBefore: String? = null,
+    @SerialName("payment_url") val paymentUrl: String? = null,
+)
+
+@Serializable
+data class StudentBillingProfile(
+    @SerialName("amount_cents") val amountCents: Int,
+    val currency: String,
+    @SerialName("billing_cycle") val billingCycle: String,
+    @SerialName("session_minutes") val sessionMinutes: Int? = null,
+    @SerialName("public_note") val publicNote: String? = null,
+)
+
+@Serializable
+data class StudentPaymentItem(
+    val id: String,
+    val label: String,
+    @SerialName("amount_cents") val amountCents: Int,
+    val currency: String,
+    @SerialName("due_on") val dueOn: String,
+    val status: String,
+    @SerialName("payment_method") val paymentMethod: String? = null,
+    @SerialName("paid_at") val paidAt: String? = null,
+    @SerialName("public_note") val publicNote: String? = null,
+)
+
+data class StudentPrivateData(
+    val agenda: StudentAgendaPayload,
+    val lessons: StudentLessonPayload,
+    val activity: StudentActivityPayload,
+    val billing: StudentBillingPayload,
+)
+
+@Serializable
+data class StudentNotificationReadRequest(val id: String)
+
+@Serializable
+data class StudentNotificationReadPayload(val read: Boolean)

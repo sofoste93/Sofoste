@@ -4,11 +4,17 @@ import android.content.Context
 import de.sofoste.app.BuildConfig
 import de.sofoste.app.data.model.ApiErrorEnvelope
 import de.sofoste.app.data.model.StudentActivationRequest
+import de.sofoste.app.data.model.StudentActivityPayload
+import de.sofoste.app.data.model.StudentAgendaPayload
 import de.sofoste.app.data.model.StudentAuthPayload
+import de.sofoste.app.data.model.StudentBillingPayload
 import de.sofoste.app.data.model.StudentCsrfPayload
 import de.sofoste.app.data.model.StudentEnvelope
 import de.sofoste.app.data.model.StudentLoginRequest
+import de.sofoste.app.data.model.StudentLessonPayload
 import de.sofoste.app.data.model.StudentMePayload
+import de.sofoste.app.data.model.StudentNotificationReadPayload
+import de.sofoste.app.data.model.StudentNotificationReadRequest
 import de.sofoste.app.data.session.SecureStudentCookieStorage
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -86,6 +92,25 @@ class StudentApi(
         }
         ensureSuccess(response.status.value) { response.body<ApiErrorEnvelope>() }
         return response.body()
+    }
+
+    suspend fun agenda(language: String): StudentAgendaPayload = get("agenda", language)
+
+    suspend fun lessons(language: String): StudentLessonPayload = get("lessons", language)
+
+    suspend fun activity(language: String): StudentActivityPayload = get("notifications", language)
+
+    suspend fun billing(language: String): StudentBillingPayload = get("billing", language)
+
+    suspend fun markActivityRead(language: String, id: String): Boolean {
+        val token = csrfToken ?: refreshCsrf(language)
+        val payload = post<StudentNotificationReadRequest, StudentNotificationReadPayload>(
+            path = "notifications/read",
+            language = language,
+            token = token,
+            body = StudentNotificationReadRequest(id),
+        )
+        return payload.read
     }
 
     suspend fun logout(language: String) {

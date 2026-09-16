@@ -12,14 +12,15 @@ directly to MariaDB.
 - Public cards open their canonical localized page on `sofoste.de`.
 - Production HTTPS by default; local emulator traffic is allowlisted only for `10.0.2.2`.
 - Native student login and one-use invitation activation.
-- Private student overview, authenticated avatar, session refresh and sign-out.
+- Private student cockpit with overview, authenticated avatar and personal agenda.
+- Native shared lesson archive, activity inbox with explicit read acknowledgement,
+  and personal billing/reminder detail with the allowlisted PayPal action.
 - The student cookie is isolated from the public client, encrypted with Android
   Keystore at rest, capped to the server's eight-hour session and excluded from backup.
 - Password recovery and profile editing open the existing localized HTTPS student space.
 
-The next orbit adds the native lesson archive, billing detail and activity inbox.
-Operating-system push delivery remains a later step after the private data screens
-and notification preferences are complete.
+The next orbit prepares notification preferences and generic operating-system push
+delivery. Private lesson text must never be placed on a lock screen.
 
 ## Build
 

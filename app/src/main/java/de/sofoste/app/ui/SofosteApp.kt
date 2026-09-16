@@ -4,6 +4,8 @@ import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -65,6 +67,10 @@ import de.sofoste.app.data.model.MediaItem
 import de.sofoste.app.data.model.ProjectItem
 import de.sofoste.app.data.model.PublicContent
 import de.sofoste.app.data.model.StudentOverview
+import de.sofoste.app.data.model.StudentActivityItem
+import de.sofoste.app.data.model.StudentAgendaItem
+import de.sofoste.app.data.model.StudentLessonItem
+import de.sofoste.app.data.model.StudentPaymentItem
 import de.sofoste.app.ui.theme.Aurora
 import de.sofoste.app.ui.theme.DeepSpace
 import de.sofoste.app.ui.theme.Nebula
@@ -74,6 +80,7 @@ import de.sofoste.app.ui.theme.Solar
 import de.sofoste.app.ui.theme.Starlight
 import de.sofoste.app.ui.theme.Void
 import java.text.NumberFormat
+import java.text.SimpleDateFormat
 import java.util.Currency
 import java.util.Locale
 
@@ -169,6 +176,41 @@ private data class StudentCopy(
     val unread: String,
     val payments: String,
     val amountDue: String,
+    val upcoming: String,
+    val overviewTab: String,
+    val agendaTab: String,
+    val lessonsTab: String,
+    val activityTab: String,
+    val paymentsTab: String,
+    val emptyAgenda: String,
+    val emptyLessons: String,
+    val emptyActivity: String,
+    val emptyPayments: String,
+    val planned: String,
+    val completed: String,
+    val cancelled: String,
+    val flexibleTime: String,
+    val duration: String,
+    val summary: String,
+    val progress: String,
+    val practice: String,
+    val lessonPublished: String,
+    val unreadLabel: String,
+    val readLabel: String,
+    val markRead: String,
+    val personalTerms: String,
+    val perLesson: String,
+    val everyTwoWeeks: String,
+    val monthly: String,
+    val paymentMethod: String,
+    val cash: String,
+    val bankTransfer: String,
+    val otherMethod: String,
+    val dueOn: String,
+    val due: String,
+    val paid: String,
+    val waived: String,
+    val payPal: String,
     val refresh: String,
     val logout: String,
     val manageProfile: String,
@@ -201,6 +243,41 @@ private fun studentCopy(language: AppLanguage): StudentCopy = when (language) {
         unread = "New activities",
         payments = "Payment reminders",
         amountDue = "Amount due",
+        upcoming = "Upcoming sessions",
+        overviewTab = "Overview",
+        agendaTab = "Agenda",
+        lessonsTab = "Lessons",
+        activityTab = "Activity",
+        paymentsTab = "Payments",
+        emptyAgenda = "No session is scheduled in this orbit.",
+        emptyLessons = "No lesson note has been shared yet.",
+        emptyActivity = "No new classroom activity.",
+        emptyPayments = "No payment reminder.",
+        planned = "Planned",
+        completed = "Completed",
+        cancelled = "Cancelled",
+        flexibleTime = "Time to be agreed",
+        duration = "min",
+        summary = "Session notes",
+        progress = "Progress",
+        practice = "Practice path",
+        lessonPublished = "A lesson note was shared",
+        unreadLabel = "New",
+        readLabel = "Read",
+        markRead = "Mark as read",
+        personalTerms = "Personal terms",
+        perLesson = "Per lesson",
+        everyTwoWeeks = "Every two weeks",
+        monthly = "Monthly",
+        paymentMethod = "Payment method",
+        cash = "Cash",
+        bankTransfer = "Bank transfer",
+        otherMethod = "Other",
+        dueOn = "Due",
+        due = "Due",
+        paid = "Paid",
+        waived = "Waived",
+        payPal = "Open PayPal",
         refresh = "Refresh",
         logout = "Sign out",
         manageProfile = "Manage profile and password",
@@ -231,6 +308,41 @@ private fun studentCopy(language: AppLanguage): StudentCopy = when (language) {
         unread = "Nouvelles activités",
         payments = "Rappels de règlement",
         amountDue = "Montant à régler",
+        upcoming = "Séances à venir",
+        overviewTab = "Vue d’ensemble",
+        agendaTab = "Agenda",
+        lessonsTab = "Cours",
+        activityTab = "Activités",
+        paymentsTab = "Règlements",
+        emptyAgenda = "Aucune séance n’est programmée dans cette orbite.",
+        emptyLessons = "Aucune note de cours n’a encore été partagée.",
+        emptyActivity = "Aucune nouvelle activité dans la salle de classe.",
+        emptyPayments = "Aucun rappel de règlement.",
+        planned = "Planifiée",
+        completed = "Terminée",
+        cancelled = "Annulée",
+        flexibleTime = "Heure à convenir",
+        duration = "min",
+        summary = "Notes de séance",
+        progress = "Progression",
+        practice = "Piste de travail",
+        lessonPublished = "Une note de cours a été partagée",
+        unreadLabel = "Nouveau",
+        readLabel = "Lu",
+        markRead = "Marquer comme lu",
+        personalTerms = "Conditions personnelles",
+        perLesson = "Par séance",
+        everyTwoWeeks = "Toutes les deux semaines",
+        monthly = "Par mois",
+        paymentMethod = "Mode de règlement",
+        cash = "Espèces",
+        bankTransfer = "Virement bancaire",
+        otherMethod = "Autre",
+        dueOn = "Échéance",
+        due = "À régler",
+        paid = "Réglé",
+        waived = "Dispensé",
+        payPal = "Ouvrir PayPal",
         refresh = "Actualiser",
         logout = "Déconnexion",
         manageProfile = "Gérer le profil et le mot de passe",
@@ -261,6 +373,41 @@ private fun studentCopy(language: AppLanguage): StudentCopy = when (language) {
         unread = "Neue Aktivitäten",
         payments = "Zahlungserinnerungen",
         amountDue = "Offener Betrag",
+        upcoming = "Kommende Termine",
+        overviewTab = "Übersicht",
+        agendaTab = "Agenda",
+        lessonsTab = "Lektionen",
+        activityTab = "Aktivitäten",
+        paymentsTab = "Zahlungen",
+        emptyAgenda = "In dieser Umlaufbahn ist kein Termin geplant.",
+        emptyLessons = "Noch wurden keine Unterrichtsnotizen geteilt.",
+        emptyActivity = "Keine neue Aktivität im Lernraum.",
+        emptyPayments = "Keine Zahlungserinnerung.",
+        planned = "Geplant",
+        completed = "Abgeschlossen",
+        cancelled = "Abgesagt",
+        flexibleTime = "Uhrzeit nach Absprache",
+        duration = "Min.",
+        summary = "Unterrichtsnotizen",
+        progress = "Fortschritt",
+        practice = "Übungsweg",
+        lessonPublished = "Eine Unterrichtsnotiz wurde geteilt",
+        unreadLabel = "Neu",
+        readLabel = "Gelesen",
+        markRead = "Als gelesen markieren",
+        personalTerms = "Persönliche Konditionen",
+        perLesson = "Pro Unterricht",
+        everyTwoWeeks = "Alle zwei Wochen",
+        monthly = "Monatlich",
+        paymentMethod = "Zahlungsart",
+        cash = "Bargeld",
+        bankTransfer = "Überweisung",
+        otherMethod = "Andere",
+        dueOn = "Fällig",
+        due = "Offen",
+        paid = "Bezahlt",
+        waived = "Erlassen",
+        payPal = "PayPal öffnen",
         refresh = "Aktualisieren",
         logout = "Abmelden",
         manageProfile = "Profil und Passwort verwalten",
@@ -316,6 +463,7 @@ fun SofosteApp(viewModel: SofosteViewModel = viewModel()) {
                     onActivate = viewModel::activateStudent,
                     onRefresh = viewModel::refreshStudent,
                     onLogout = viewModel::logoutStudent,
+                    onMarkActivityRead = viewModel::markStudentActivityRead,
                     onClearError = viewModel::clearStudentError,
                     modifier = Modifier.padding(padding),
                 )
@@ -453,6 +601,7 @@ private fun StudentOrbit(
     onActivate: (String, String, String) -> Unit,
     onRefresh: () -> Unit,
     onLogout: () -> Unit,
+    onMarkActivityRead: (String) -> Unit,
     onClearError: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -483,6 +632,7 @@ private fun StudentOrbit(
             labels = labels,
             onRefresh = onRefresh,
             onLogout = onLogout,
+            onMarkActivityRead = onMarkActivityRead,
             modifier = modifier,
         )
     }
@@ -658,6 +808,7 @@ private fun StudentDashboard(
     labels: StudentCopy,
     onRefresh: () -> Unit,
     onLogout: () -> Unit,
+    onMarkActivityRead: (String) -> Unit,
     modifier: Modifier,
 ) {
     val overview = state.overview ?: return
@@ -667,6 +818,7 @@ private fun StudentDashboard(
             BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
         }
     }
+    var section by remember { mutableStateOf(StudentSection.Overview) }
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
@@ -717,10 +869,72 @@ private fun StudentDashboard(
                 Text(studentErrorMessage(code, labels), color = MaterialTheme.colorScheme.error)
             }
         }
-        item { StudentMetric(labels.lessons, overview.lessons.toString(), Aurora) }
-        item { StudentMetric(labels.unread, overview.unread.toString(), Nebula) }
-        item { StudentMetric(labels.payments, overview.paymentsDue.toString(), Solar) }
-        item { StudentMetric(labels.amountDue, formatEuros(overview.amountDueCents, language), Orbit) }
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                StudentSection.entries.forEach { option ->
+                    FilterChip(
+                        selected = option == section,
+                        onClick = { section = option },
+                        label = { Text(studentSectionLabel(option, labels)) },
+                    )
+                }
+            }
+        }
+        when (section) {
+            StudentSection.Overview -> {
+                item { StudentMetric(labels.upcoming, overview.upcoming.toString(), Aurora) }
+                item { StudentMetric(labels.lessons, overview.lessons.toString(), Aurora) }
+                item { StudentMetric(labels.unread, overview.unread.toString(), Nebula) }
+                item { StudentMetric(labels.payments, overview.paymentsDue.toString(), Solar) }
+                item { StudentMetric(labels.amountDue, formatEuros(overview.amountDueCents, language), Orbit) }
+            }
+            StudentSection.Agenda -> {
+                if (state.agenda.isEmpty()) item { EmptyStudentSignal(labels.emptyAgenda) }
+                items(state.agenda, key = { it.id }) { AgendaCard(it, language, labels) }
+            }
+            StudentSection.Lessons -> {
+                if (state.lessons.isEmpty()) item { EmptyStudentSignal(labels.emptyLessons) }
+                items(state.lessons, key = { it.id }) { LessonCard(it, language, labels) }
+            }
+            StudentSection.Activity -> {
+                if (state.activity.isEmpty()) item { EmptyStudentSignal(labels.emptyActivity) }
+                items(state.activity, key = { it.id }) {
+                    ActivityCard(it, language, labels, onMarkActivityRead)
+                }
+            }
+            StudentSection.Payments -> {
+                state.billing?.profile?.let { profile ->
+                    item {
+                        StudentInfoCard(
+                            title = labels.personalTerms,
+                            body = buildString {
+                                append(formatEuros(profile.amountCents, language))
+                                append(" · ${billingCycleLabel(profile.billingCycle, labels)}")
+                                profile.sessionMinutes?.let { append(" · $it ${labels.duration}") }
+                                profile.publicNote?.takeIf(String::isNotBlank)?.let { append("\n$it") }
+                            },
+                            accent = Solar,
+                        )
+                    }
+                }
+                val payments = state.billing?.items.orEmpty()
+                if (payments.isEmpty()) item { EmptyStudentSignal(labels.emptyPayments) }
+                items(payments, key = { it.id }) { PaymentCard(it, language, labels) }
+                state.billing?.paymentUrl?.let { paymentUrl ->
+                    item {
+                        Button(
+                            onClick = { uriHandler.openUri(paymentUrl) },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) { Text(labels.payPal) }
+                    }
+                }
+            }
+        }
         item {
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
         }
@@ -759,6 +973,205 @@ private fun StudentDashboard(
             )
         }
     }
+}
+
+private enum class StudentSection {
+    Overview,
+    Agenda,
+    Lessons,
+    Activity,
+    Payments,
+}
+
+private fun studentSectionLabel(section: StudentSection, labels: StudentCopy): String = when (section) {
+    StudentSection.Overview -> labels.overviewTab
+    StudentSection.Agenda -> labels.agendaTab
+    StudentSection.Lessons -> labels.lessonsTab
+    StudentSection.Activity -> labels.activityTab
+    StudentSection.Payments -> labels.paymentsTab
+}
+
+@Composable
+private fun AgendaCard(item: StudentAgendaItem, language: AppLanguage, labels: StudentCopy) {
+    val status = when (item.status) {
+        "completed" -> labels.completed
+        "cancelled" -> labels.cancelled
+        else -> labels.planned
+    }
+    val accent = when (item.status) {
+        "completed" -> Aurora
+        "cancelled" -> MaterialTheme.colorScheme.error
+        else -> Orbit
+    }
+    StudentInfoCard(
+        title = localizedDate(item.sessionDate, language),
+        body = "${item.startTime ?: labels.flexibleTime} · ${item.durationMinutes} ${labels.duration}\n$status",
+        accent = accent,
+    )
+}
+
+@Composable
+private fun LessonCard(item: StudentLessonItem, language: AppLanguage, labels: StudentCopy) {
+    Surface(
+        color = Panel.copy(alpha = 0.9f),
+        shape = RoundedCornerShape(22.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text(item.title, color = Starlight, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Text(localizedDate(item.sessionDate, language), color = Aurora, fontSize = 13.sp)
+            LessonField(labels.summary, item.summary)
+            LessonField(labels.progress, item.progress)
+            LessonField(labels.practice, item.practice)
+        }
+    }
+}
+
+@Composable
+private fun LessonField(label: String, value: String) {
+    if (value.isBlank()) return
+    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        Text(label.uppercase(), color = Orbit, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        Text(value, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+private fun ActivityCard(
+    item: StudentActivityItem,
+    language: AppLanguage,
+    labels: StudentCopy,
+    onMarkRead: (String) -> Unit,
+) {
+    val unread = item.readAt == null
+    Surface(
+        color = if (unread) Nebula.copy(alpha = 0.2f) else Panel.copy(alpha = 0.86f),
+        shape = RoundedCornerShape(22.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(labels.lessonPublished, color = Starlight, fontWeight = FontWeight.Bold)
+            Text(
+                localizedDate(item.createdAt.take(10), language),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontSize = 13.sp,
+            )
+            Text(
+                if (unread) labels.unreadLabel else labels.readLabel,
+                color = if (unread) Nebula else Aurora,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            if (unread) {
+                TextButton(onClick = { onMarkRead(item.id) }) { Text(labels.markRead) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PaymentCard(item: StudentPaymentItem, language: AppLanguage, labels: StudentCopy) {
+    val status = when (item.status) {
+        "paid" -> labels.paid
+        "waived" -> labels.waived
+        else -> labels.due
+    }
+    val accent = if (item.status == "due") Solar else Aurora
+    Surface(
+        color = Panel.copy(alpha = 0.9f),
+        shape = RoundedCornerShape(22.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(7.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(item.label, color = Starlight, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                Text(formatEuros(item.amountCents, language), color = accent, fontWeight = FontWeight.Black)
+            }
+            Text("${labels.dueOn} · ${localizedDate(item.dueOn, language)}", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(status, color = accent, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            item.paymentMethod?.let {
+                Text(
+                    "${labels.paymentMethod} · ${paymentMethodLabel(it, labels)}",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 13.sp,
+                )
+            }
+            item.publicNote?.takeIf(String::isNotBlank)?.let {
+                Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+}
+
+@Composable
+private fun StudentInfoCard(title: String, body: String, accent: Color) {
+    Surface(
+        color = Panel.copy(alpha = 0.9f),
+        shape = RoundedCornerShape(22.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(7.dp),
+        ) {
+            Text(title, color = Starlight, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            Text(body, color = accent)
+        }
+    }
+}
+
+@Composable
+private fun EmptyStudentSignal(message: String) {
+    Surface(
+        color = Panel.copy(alpha = 0.72f),
+        shape = RoundedCornerShape(22.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Text(
+            message,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(22.dp),
+        )
+    }
+}
+
+private fun localizedDate(value: String, language: AppLanguage): String {
+    val locale = when (language) {
+        AppLanguage.English -> Locale.UK
+        AppLanguage.French -> Locale.FRANCE
+        AppLanguage.German -> Locale.GERMANY
+    }
+    return runCatching {
+        val parsed = SimpleDateFormat("yyyy-MM-dd", Locale.ROOT).apply { isLenient = false }.parse(value)
+            ?: return@runCatching value
+        SimpleDateFormat("EEE d MMM yyyy", locale).format(parsed)
+    }.getOrDefault(value)
+}
+
+private fun billingCycleLabel(value: String, labels: StudentCopy): String = when (value) {
+    "fortnightly" -> labels.everyTwoWeeks
+    "monthly" -> labels.monthly
+    else -> labels.perLesson
+}
+
+private fun paymentMethodLabel(value: String, labels: StudentCopy): String = when (value) {
+    "paypal" -> "PayPal"
+    "cash" -> labels.cash
+    "bank_transfer" -> labels.bankTransfer
+    else -> labels.otherMethod
 }
 
 @Composable

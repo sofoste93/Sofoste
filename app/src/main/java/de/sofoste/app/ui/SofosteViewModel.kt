@@ -8,6 +8,10 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import de.sofoste.app.data.model.PublicContent
 import de.sofoste.app.data.model.StudentMePayload
+import de.sofoste.app.data.model.StudentActivityItem
+import de.sofoste.app.data.model.StudentAgendaItem
+import de.sofoste.app.data.model.StudentBillingPayload
+import de.sofoste.app.data.model.StudentLessonItem
 import de.sofoste.app.data.model.StudentOverview
 import de.sofoste.app.data.remote.SofosteApi
 import de.sofoste.app.data.remote.SofosteApiException
@@ -50,6 +54,10 @@ data class StudentUiState(
     val status: StudentSessionStatus = StudentSessionStatus.Checking,
     val overview: StudentOverview? = null,
     val avatar: ByteArray? = null,
+    val agenda: List<StudentAgendaItem> = emptyList(),
+    val lessons: List<StudentLessonItem> = emptyList(),
+    val activity: List<StudentActivityItem> = emptyList(),
+    val billing: StudentBillingPayload? = null,
     val busy: Boolean = false,
     val errorCode: String? = null,
 )
@@ -135,6 +143,20 @@ class SofosteViewModel(application: Application) : AndroidViewModel(application)
         state = state.copy(student = state.student.copy(errorCode = null))
     }
 
+    fun markStudentActivityRead(id: String) {
+        if (state.student.status != StudentSessionStatus.SignedIn) return
+        studentJob?.cancel()
+        studentJob = viewModelScope.launch {
+            state = state.copy(student = state.student.copy(busy = true, errorCode = null))
+            runCatching {
+                studentRepository.markActivityRead(state.language.code, id)
+                studentRepository.refresh(state.language.code)
+            }
+                .onSuccess { applyStudentSession(it) }
+                .onFailure { handleStudentFailure(it, keepDashboard = true) }
+        }
+    }
+
     private fun restoreStudent() {
         studentJob?.cancel()
         studentJob = viewModelScope.launch {
@@ -156,16 +178,20 @@ class SofosteViewModel(application: Application) : AndroidViewModel(application)
     }
 
     private suspend fun applyStudentSession(session: StudentMePayload) {
-        val avatar = if (session.overview.hasAvatar) {
-            runCatching { studentRepository.avatar(state.language.code) }.getOrNull()
-        } else {
-            null
-        }
+        val language = state.language.code
+        val avatar = if (session.overview.hasAvatar) runCatching {
+            studentRepository.avatar(language)
+        }.getOrNull() else null
+        val privateData = studentRepository.privateData(language)
         state = state.copy(
             student = StudentUiState(
                 status = StudentSessionStatus.SignedIn,
                 overview = session.overview,
                 avatar = avatar,
+                agenda = privateData.agenda.items,
+                lessons = privateData.lessons.items,
+                activity = privateData.activity.items,
+                billing = privateData.billing,
             ),
         )
     }
