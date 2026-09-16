@@ -11,10 +11,15 @@ directly to MariaDB.
 - Sofoste Aurora visual system with loading, empty and retry states.
 - Public cards open their canonical localized page on `sofoste.de`.
 - Production HTTPS by default; local emulator traffic is allowlisted only for `10.0.2.2`.
+- Native student login and one-use invitation activation.
+- Private student overview, authenticated avatar, session refresh and sign-out.
+- The student cookie is isolated from the public client, encrypted with Android
+  Keystore at rest, capped to the server's eight-hour session and excluded from backup.
+- Password recovery and profile editing open the existing localized HTTPS student space.
 
-The authenticated student space, lesson archive, billing reminders and activity
-notifications are the next orbit. Its server contract already exists under
-`/api/v1/student/*` and requires a private cookie jar plus CSRF handling.
+The next orbit adds the native lesson archive, billing detail and activity inbox.
+Operating-system push delivery remains a later step after the private data screens
+and notification preferences are complete.
 
 ## Build
 
@@ -30,5 +35,16 @@ To point a development build at the PHP router from an Android emulator:
 ```powershell
 .\gradlew.bat assembleDebug -PSOFOSTE_API_BASE_URL=http://10.0.2.2:8000/api/v1/
 ```
+
+Run the Android checks with:
+
+```powershell
+.\gradlew.bat lintDebug assembleDebug
+.\gradlew.bat connectedDebugAndroidTest
+```
+
+The device test uses the instrumentation package rather than application storage. It
+verifies that the synthetic student cookie is encrypted, scoped to `sofoste.de` and
+clearable without reading or changing a real student session.
 
 No database credentials, API secrets or production tokens belong in this repository.
