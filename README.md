@@ -12,15 +12,21 @@ directly to MariaDB.
 - Public cards open their canonical localized page on `sofoste.de`.
 - Production HTTPS by default; local emulator traffic is allowlisted only for `10.0.2.2`.
 - Native student login and one-use invitation activation.
-- Private student cockpit with overview, authenticated avatar and personal agenda.
-- Native shared lesson archive, activity inbox with explicit read acknowledgement,
+- Private student cockpit with overview, authenticated avatar and a manageable personal agenda.
+- Native shared lesson archive, activity inbox with the complete shared note and explicit read acknowledgement,
   and personal billing/reminder detail with the allowlisted PayPal action.
+- Native student profile, private avatar upload/removal and authenticated password change.
+- Isolated four-hour administrator sign-in with a private crew profile, avatar,
+  password rotation and read-only Mission Control telemetry.
+- One active crew identity per device: entering the classroom closes the local admin
+  session, and entering Mission Control closes the local student session.
+- Icon navigation keeps Mission Control behind the discreet crew control in the header.
 - The student cookie is isolated from the public client, encrypted with Android
   Keystore at rest, capped to the server's eight-hour session and excluded from backup.
-- Password recovery and profile editing open the existing localized HTTPS student space.
+- Password recovery opens the existing localized HTTPS student space.
 
 The next orbit prepares notification preferences and generic operating-system push
-delivery. Private lesson text must never be placed on a lock screen.
+delivery. Private lesson or Mission Control text must never be placed on a lock screen.
 
 ## Build
 

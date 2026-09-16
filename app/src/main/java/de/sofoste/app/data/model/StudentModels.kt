@@ -36,8 +36,40 @@ data class StudentMePayload(
     @SerialName("signed_in") val signedIn: Boolean,
     @SerialName("csrf_token") val csrfToken: String,
     val overview: StudentOverview,
+    val profile: StudentProfile? = null,
     @SerialName("avatar_url") val avatarUrl: String? = null,
 )
+
+@Serializable
+data class StudentProfile(
+    val email: String,
+    @SerialName("display_name") val displayName: String,
+    @SerialName("preferred_language") val preferredLanguage: String,
+)
+
+@Serializable
+data class StudentProfileRequest(
+    @SerialName("display_name") val displayName: String,
+    @SerialName("preferred_language") val preferredLanguage: String,
+)
+
+@Serializable
+data class StudentProfilePayload(val profile: StudentProfile)
+
+@Serializable
+data class PasswordChangeRequest(
+    @SerialName("current_password") val currentPassword: String,
+    @SerialName("new_password") val newPassword: String,
+)
+
+@Serializable
+data class PasswordChangePayload(
+    val changed: Boolean,
+    @SerialName("csrf_token") val csrfToken: String,
+)
+
+@Serializable
+data class UploadPayload(val uploaded: Boolean = false, val removed: Boolean = false)
 
 @Serializable
 data class StudentOverview(
@@ -64,6 +96,20 @@ data class StudentAgendaItem(
     @SerialName("start_time") val startTime: String? = null,
     @SerialName("duration_minutes") val durationMinutes: Int,
     val status: String,
+    @SerialName("can_manage") val canManage: Boolean = false,
+)
+
+@Serializable
+data class StudentAppointmentRequest(
+    val id: String,
+    val date: String? = null,
+    val time: String? = null,
+)
+
+@Serializable
+data class StudentAppointmentPayload(
+    val rescheduled: Boolean = false,
+    val cancelled: Boolean = false,
 )
 
 @Serializable
@@ -97,6 +143,11 @@ data class StudentActivityItem(
     @SerialName("read_at") val readAt: String? = null,
     @SerialName("created_at") val createdAt: String,
     val type: String,
+    val title: String,
+    val summary: String,
+    val progress: String,
+    val practice: String,
+    @SerialName("session_date") val sessionDate: String,
 )
 
 @Serializable

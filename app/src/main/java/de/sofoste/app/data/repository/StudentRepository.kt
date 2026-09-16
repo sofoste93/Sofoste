@@ -6,6 +6,7 @@ import de.sofoste.app.data.model.StudentAgendaPayload
 import de.sofoste.app.data.model.StudentBillingPayload
 import de.sofoste.app.data.model.StudentLessonPayload
 import de.sofoste.app.data.model.StudentPrivateData
+import de.sofoste.app.data.model.StudentProfile
 import de.sofoste.app.data.remote.SofosteApiException
 import de.sofoste.app.data.remote.StudentApi
 import kotlinx.coroutines.async
@@ -53,6 +54,23 @@ class StudentRepository(
 
     suspend fun markActivityRead(language: String, id: String): Boolean =
         api.markActivityRead(language, id)
+
+    suspend fun rescheduleAppointment(language: String, id: String, date: String, time: String): Boolean =
+        api.rescheduleAppointment(language, id, date, time)
+
+    suspend fun cancelAppointment(language: String, id: String): Boolean =
+        api.cancelAppointment(language, id)
+
+    suspend fun saveProfile(language: String, displayName: String, preferredLanguage: String): StudentProfile =
+        api.saveProfile(language, displayName, preferredLanguage)
+
+    suspend fun changePassword(language: String, currentPassword: String, newPassword: String): Boolean =
+        api.changePassword(language, currentPassword, newPassword)
+
+    suspend fun uploadAvatar(language: String, bytes: ByteArray, mimeType: String): Boolean =
+        api.uploadAvatar(language, bytes, mimeType)
+
+    suspend fun removeAvatar(language: String): Boolean = api.removeAvatar(language)
 
     private suspend fun <T> privateCall(fallback: T, request: suspend () -> T): T = try {
         request()

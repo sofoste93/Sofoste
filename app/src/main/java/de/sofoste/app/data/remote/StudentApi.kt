@@ -6,6 +6,8 @@ import de.sofoste.app.data.model.ApiErrorEnvelope
 import de.sofoste.app.data.model.StudentActivationRequest
 import de.sofoste.app.data.model.StudentActivityPayload
 import de.sofoste.app.data.model.StudentAgendaPayload
+import de.sofoste.app.data.model.StudentAppointmentPayload
+import de.sofoste.app.data.model.StudentAppointmentRequest
 import de.sofoste.app.data.model.StudentAuthPayload
 import de.sofoste.app.data.model.StudentBillingPayload
 import de.sofoste.app.data.model.StudentCsrfPayload
@@ -15,6 +17,12 @@ import de.sofoste.app.data.model.StudentLessonPayload
 import de.sofoste.app.data.model.StudentMePayload
 import de.sofoste.app.data.model.StudentNotificationReadPayload
 import de.sofoste.app.data.model.StudentNotificationReadRequest
+import de.sofoste.app.data.model.PasswordChangePayload
+import de.sofoste.app.data.model.PasswordChangeRequest
+import de.sofoste.app.data.model.StudentProfile
+import de.sofoste.app.data.model.StudentProfilePayload
+import de.sofoste.app.data.model.StudentProfileRequest
+import de.sofoste.app.data.model.UploadPayload
 import de.sofoste.app.data.session.SecureStudentCookieStorage
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -23,12 +31,15 @@ import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.cookies.HttpCookies
 import io.ktor.client.request.accept
 import io.ktor.client.request.get
+import io.ktor.client.request.forms.MultiPartFormDataContent
+import io.ktor.client.request.forms.formData
 import io.ktor.client.request.header
 import io.ktor.client.request.parameter
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
+import io.ktor.http.Headers
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
@@ -96,6 +107,16 @@ class StudentApi(
 
     suspend fun agenda(language: String): StudentAgendaPayload = get("agenda", language)
 
+    suspend fun rescheduleAppointment(language: String, id: String, date: String, time: String): Boolean =
+        csrfPost<StudentAppointmentRequest, StudentAppointmentPayload>(
+            "agenda/reschedule", language, StudentAppointmentRequest(id, date, time),
+        ).rescheduled
+
+    suspend fun cancelAppointment(language: String, id: String): Boolean =
+        csrfPost<StudentAppointmentRequest, StudentAppointmentPayload>(
+            "agenda/cancel", language, StudentAppointmentRequest(id),
+        ).cancelled
+
     suspend fun lessons(language: String): StudentLessonPayload = get("lessons", language)
 
     suspend fun activity(language: String): StudentActivityPayload = get("notifications", language)
@@ -112,6 +133,59 @@ class StudentApi(
         )
         return payload.read
     }
+
+    suspend fun saveProfile(language: String, displayName: String, preferredLanguage: String): StudentProfile =
+        csrfPost<StudentProfileRequest, StudentProfilePayload>(
+            path = "profile",
+            language = language,
+            body = StudentProfileRequest(displayName.trim(), preferredLanguage),
+        ).profile
+
+    suspend fun changePassword(language: String, currentPassword: String, newPassword: String): Boolean {
+        val payload = csrfPost<PasswordChangeRequest, PasswordChangePayload>(
+            path = "password",
+            language = language,
+            body = PasswordChangeRequest(currentPassword, newPassword),
+        )
+        csrfToken = payload.csrfToken
+        return payload.changed
+    }
+
+    suspend fun uploadAvatar(language: String, bytes: ByteArray, mimeType: String): Boolean {
+        suspend fun request(token: String): UploadPayload {
+            val extension = when (mimeType) {
+                "image/png" -> "png"
+                "image/webp" -> "webp"
+                else -> "jpg"
+            }
+            val response = client.post("$apiRoot/student/avatar/upload") {
+                accept(ContentType.Application.Json)
+                header(HttpHeaders.CacheControl, "no-store")
+                header("X-CSRF-Token", token)
+                parameter("lang", language)
+                setBody(MultiPartFormDataContent(formData {
+                    append("avatar", bytes, Headers.build {
+                        append(HttpHeaders.ContentType, mimeType)
+                        append(HttpHeaders.ContentDisposition, "filename=\"avatar.$extension\"")
+                    })
+                }))
+            }
+            ensureSuccess(response.status.value) { response.body<ApiErrorEnvelope>() }
+            return response.body<StudentEnvelope<UploadPayload>>().data
+        }
+        var token = csrfToken ?: refreshCsrf(language)
+        val payload = try {
+            request(token)
+        } catch (exception: SofosteApiException) {
+            if (exception.status != 403) throw exception
+            token = refreshCsrf(language)
+            request(token)
+        }
+        return payload.uploaded
+    }
+
+    suspend fun removeAvatar(language: String): Boolean =
+        csrfPost<EmptyBody, UploadPayload>("avatar/remove", language, EmptyBody).removed
 
     suspend fun logout(language: String) {
         try {
@@ -147,6 +221,21 @@ class StudentApi(
         }
         csrfToken = authentication.csrfToken
         return me(language)
+    }
+
+    private suspend inline fun <reified Request : Any, reified Response> csrfPost(
+        path: String,
+        language: String,
+        body: Request,
+    ): Response {
+        var token = csrfToken ?: refreshCsrf(language)
+        return try {
+            post(path, language, token, body)
+        } catch (exception: SofosteApiException) {
+            if (exception.status != 403) throw exception
+            token = refreshCsrf(language)
+            post(path, language, token, body)
+        }
     }
 
     private suspend fun refreshCsrf(language: String): String {
