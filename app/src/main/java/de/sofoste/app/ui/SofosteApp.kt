@@ -1671,7 +1671,7 @@ private fun AgendaCard(
     val accent = when (item.status) {
         "completed" -> Aurora
         "cancelled" -> MaterialTheme.colorScheme.error
-        else -> Orbit
+        else -> Solar
     }
     var editing by remember(item.id) { mutableStateOf(false) }
     var confirmCancel by remember(item.id) { mutableStateOf(false) }
@@ -1684,8 +1684,17 @@ private fun AgendaCard(
         modifier = Modifier.fillMaxWidth(),
     ) {
         Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(localizedDate(item.sessionDate, language), color = accent, fontWeight = FontWeight.Bold)
-            Text("${item.startTime ?: labels.flexibleTime} · ${item.durationMinutes} ${labels.duration}\n$status")
+            Text(
+                localizedDate(item.sessionDate, language),
+                color = Starlight,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            Text(
+                "${item.startTime ?: labels.flexibleTime} · ${item.durationMinutes} ${labels.duration}",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(status.uppercase(), color = accent, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             if (item.canManage) {
                 if (editing) {
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
