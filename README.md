@@ -16,6 +16,21 @@ Android may ask you to allow installations from the browser or file manager used
 open the APK. This permission can be disabled again immediately after installation.
 The release page publishes the SHA-256 checksum for independent verification.
 
+### Install without the Play Store
+
+1. Tap **Download the latest signed APK** and wait for the download to finish.
+2. Tap **Open**. If that action does not appear, open the downloads in your browser
+   or file manager, or use **Browse every release** and select `sofoste-latest.apk`
+   from the latest release.
+3. If Android blocks the installation, open the suggested settings and temporarily
+   allow installations from the browser or file manager you used.
+4. Return to the APK, start the installation and accept the Play Protect security
+   check if Android offers it.
+5. Install and open Sofoste. You can then revoke the browser installation permission
+   in Android settings.
+
+Only install APKs published in this official repository.
+
 ## Current orbit
 
 - Public home signal, media, projects and journal.
