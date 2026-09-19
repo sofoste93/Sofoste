@@ -4,6 +4,18 @@ Native Android client for the public Sofoste Music API at `https://sofoste.de/ap
 The application is an independent Kotlin/Jetpack Compose project and does not connect
 directly to MariaDB.
 
+## Download
+
+The current public build is **Sofoste 0.4.0** for Android 7.0 or newer. Download it
+only from the official GitHub release:
+
+- [Download the latest signed APK](https://github.com/sofoste93/Sofoste/releases/latest/download/sofoste-latest.apk)
+- [Browse every release](https://github.com/sofoste93/Sofoste/releases)
+
+Android may ask you to allow installations from the browser or file manager used to
+open the APK. This permission can be disabled again immediately after installation.
+The release page publishes the SHA-256 checksum for independent verification.
+
 ## Current orbit
 
 - Public home signal, media, projects and journal.
@@ -53,5 +65,17 @@ Run the Android checks with:
 The device test uses the instrumentation package rather than application storage. It
 verifies that the synthetic student cookie is encrypted, scoped to `sofoste.de` and
 clearable without reading or changing a real student session.
+
+## Release integrity
+
+Public APKs are built from the tagged source, optimized with R8 and signed with the
+same long-lived Sofoste release certificate. The certificate SHA-256 digest is:
+
+```text
+65:F0:8B:EC:E0:FF:CE:86:C6:C2:58:03:F4:42:86:44:8B:50:77:D0:89:E2:E8:EA:EA:BA:FC:56:2F:34:AF:97
+```
+
+Version history and artifact checksums are recorded in [docs/RELEASES.md](docs/RELEASES.md).
+Please report security issues using the private process in [SECURITY.md](SECURITY.md).
 
 No database credentials, API secrets or production tokens belong in this repository.
