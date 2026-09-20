@@ -6,7 +6,7 @@ directly to MariaDB.
 
 ## Download
 
-The current public build is **Sofoste 0.4.0** for Android 7.0 or newer. Download it
+The current public build is **Sofoste 0.5.0** for Android 7.0 or newer. Download it
 only from the official GitHub release:
 
 - [Download the latest signed APK](https://github.com/sofoste93/Sofoste/releases/latest/download/sofoste-latest.apk)
