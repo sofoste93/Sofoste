@@ -7,6 +7,7 @@ import de.sofoste.app.data.model.StudentBillingPayload
 import de.sofoste.app.data.model.StudentLessonPayload
 import de.sofoste.app.data.model.StudentPrivateData
 import de.sofoste.app.data.model.StudentProfile
+import de.sofoste.app.data.model.StudentDeviceTokenPayload
 import de.sofoste.app.data.remote.SofosteApiException
 import de.sofoste.app.data.remote.StudentApi
 import kotlinx.coroutines.async
@@ -55,11 +56,18 @@ class StudentRepository(
     suspend fun markActivityRead(language: String, id: String): Boolean =
         api.markActivityRead(language, id)
 
-    suspend fun rescheduleAppointment(language: String, id: String, date: String, time: String): Boolean =
-        api.rescheduleAppointment(language, id, date, time)
+    suspend fun markAllActivityRead(language: String): Boolean = api.markAllActivityRead(language)
 
-    suspend fun cancelAppointment(language: String, id: String): Boolean =
-        api.cancelAppointment(language, id)
+    suspend fun registerDevice(language: String, deviceName: String): StudentDeviceTokenPayload =
+        api.registerDevice(language, deviceName)
+
+    suspend fun revokeDevice(language: String, token: String): Boolean = api.revokeDevice(language, token)
+
+    suspend fun rescheduleAppointment(language: String, id: String, date: String, time: String, note: String): Boolean =
+        api.rescheduleAppointment(language, id, date, time, note)
+
+    suspend fun cancelAppointment(language: String, id: String, note: String): Boolean =
+        api.cancelAppointment(language, id, note)
 
     suspend fun saveProfile(language: String, displayName: String, preferredLanguage: String): StudentProfile =
         api.saveProfile(language, displayName, preferredLanguage)

@@ -48,12 +48,16 @@ Only install APKs published in this official repository.
 - One active crew identity per device: entering the classroom closes the local admin
   session, and entering Mission Control closes the local student session.
 - Icon navigation keeps Mission Control behind the discreet crew control in the header.
+- Triton notification preferences for shared activity and 24-hour agenda reminders,
+  backed by a revocable 90-day device token encrypted with Android Keystore.
+- WorkManager checks the minimal private signal endpoint when a network is available;
+  lock-screen notifications remain generic and never include lesson text.
 - The student cookie is isolated from the public client, encrypted with Android
   Keystore at rest, capped to the server's eight-hour session and excluded from backup.
 - Password recovery opens the existing localized HTTPS student space.
 
-The next orbit prepares notification preferences and generic operating-system push
-delivery. Private lesson or Mission Control text must never be placed on a lock screen.
+Triton uses background polling rather than immediate provider-backed push, so Android
+may delay a signal under battery-saving conditions.
 
 ## Build
 

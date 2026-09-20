@@ -17,6 +17,10 @@ import de.sofoste.app.data.model.StudentLessonPayload
 import de.sofoste.app.data.model.StudentMePayload
 import de.sofoste.app.data.model.StudentNotificationReadPayload
 import de.sofoste.app.data.model.StudentNotificationReadRequest
+import de.sofoste.app.data.model.StudentDeviceRegistrationRequest
+import de.sofoste.app.data.model.StudentDeviceTokenPayload
+import de.sofoste.app.data.model.StudentDeviceRevocationRequest
+import de.sofoste.app.data.model.StudentDeviceRevocationPayload
 import de.sofoste.app.data.model.PasswordChangePayload
 import de.sofoste.app.data.model.PasswordChangeRequest
 import de.sofoste.app.data.model.StudentProfile
@@ -107,14 +111,14 @@ class StudentApi(
 
     suspend fun agenda(language: String): StudentAgendaPayload = get("agenda", language)
 
-    suspend fun rescheduleAppointment(language: String, id: String, date: String, time: String): Boolean =
+    suspend fun rescheduleAppointment(language: String, id: String, date: String, time: String, note: String): Boolean =
         csrfPost<StudentAppointmentRequest, StudentAppointmentPayload>(
-            "agenda/reschedule", language, StudentAppointmentRequest(id, date, time),
+            "agenda/reschedule", language, StudentAppointmentRequest(id, date, time, note),
         ).rescheduled
 
-    suspend fun cancelAppointment(language: String, id: String): Boolean =
+    suspend fun cancelAppointment(language: String, id: String, note: String): Boolean =
         csrfPost<StudentAppointmentRequest, StudentAppointmentPayload>(
-            "agenda/cancel", language, StudentAppointmentRequest(id),
+            "agenda/cancel", language, StudentAppointmentRequest(id, note = note),
         ).cancelled
 
     suspend fun lessons(language: String): StudentLessonPayload = get("lessons", language)
@@ -133,6 +137,27 @@ class StudentApi(
         )
         return payload.read
     }
+
+    suspend fun markAllActivityRead(language: String): Boolean =
+        csrfPost<StudentNotificationReadRequest, StudentNotificationReadPayload>(
+            path = "notifications/read-all",
+            language = language,
+            body = StudentNotificationReadRequest("all"),
+        ).read
+
+    suspend fun registerDevice(language: String, deviceName: String): StudentDeviceTokenPayload =
+        csrfPost<StudentDeviceRegistrationRequest, StudentDeviceTokenPayload>(
+            path = "devices/register",
+            language = language,
+            body = StudentDeviceRegistrationRequest(deviceName, language),
+        )
+
+    suspend fun revokeDevice(language: String, token: String): Boolean =
+        csrfPost<StudentDeviceRevocationRequest, StudentDeviceRevocationPayload>(
+            path = "devices/revoke",
+            language = language,
+            body = StudentDeviceRevocationRequest(token),
+        ).revoked
 
     suspend fun saveProfile(language: String, displayName: String, preferredLanguage: String): StudentProfile =
         csrfPost<StudentProfileRequest, StudentProfilePayload>(

@@ -97,6 +97,8 @@ data class StudentAgendaItem(
     @SerialName("duration_minutes") val durationMinutes: Int,
     val status: String,
     @SerialName("can_manage") val canManage: Boolean = false,
+    @SerialName("student_note") val studentNote: String? = null,
+    @SerialName("student_changed_at") val studentChangedAt: String? = null,
 )
 
 @Serializable
@@ -104,6 +106,7 @@ data class StudentAppointmentRequest(
     val id: String,
     val date: String? = null,
     val time: String? = null,
+    val note: String = "",
 )
 
 @Serializable
@@ -139,15 +142,19 @@ data class StudentActivityPayload(
 @Serializable
 data class StudentActivityItem(
     val id: String,
-    @SerialName("publication_id") val publicationId: String,
+    @SerialName("publication_id") val publicationId: String = "",
     @SerialName("read_at") val readAt: String? = null,
     @SerialName("created_at") val createdAt: String,
     val type: String,
-    val title: String,
-    val summary: String,
-    val progress: String,
-    val practice: String,
+    val title: String = "",
+    val summary: String = "",
+    val progress: String = "",
+    val practice: String = "",
     @SerialName("session_date") val sessionDate: String,
+    @SerialName("start_time") val startTime: String? = null,
+    @SerialName("duration_minutes") val durationMinutes: Int = 0,
+    @SerialName("student_note") val studentNote: String? = null,
+    @SerialName("occurrence_count") val occurrenceCount: Int = 1,
 )
 
 @Serializable
@@ -192,3 +199,35 @@ data class StudentNotificationReadRequest(val id: String)
 
 @Serializable
 data class StudentNotificationReadPayload(val read: Boolean)
+
+@Serializable
+data class StudentDeviceRegistrationRequest(
+    @SerialName("device_name") val deviceName: String,
+    @SerialName("preferred_language") val preferredLanguage: String,
+)
+
+@Serializable
+data class StudentDeviceTokenPayload(
+    val token: String,
+    @SerialName("expires_at") val expiresAt: String,
+)
+
+@Serializable
+data class StudentDeviceRevocationRequest(val token: String)
+
+@Serializable
+data class StudentDeviceRevocationPayload(val revoked: Boolean)
+
+@Serializable
+data class StudentSignalPayload(
+    @SerialName("latest_activity_id") val latestActivityId: String? = null,
+    @SerialName("unread_count") val unreadCount: Int = 0,
+    @SerialName("next_appointment") val nextAppointment: StudentSignalAppointment? = null,
+)
+
+@Serializable
+data class StudentSignalAppointment(
+    val id: String,
+    @SerialName("session_date") val sessionDate: String,
+    @SerialName("start_time") val startTime: String? = null,
+)

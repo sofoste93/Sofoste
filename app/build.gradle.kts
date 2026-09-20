@@ -19,14 +19,19 @@ android {
         applicationId = "de.sofoste.app"
         minSdk = 24
         targetSdk = 37
-        versionCode = 4
-        versionName = "0.4.0"
+        versionCode = 5
+        versionName = "0.5.0"
 
         buildConfigField("String", "API_BASE_URL", "\"${sofosteApiBaseUrl.get()}\"")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
+        debug {
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
+            resValue("string", "app_name", "Sofoste Debug")
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
@@ -45,6 +50,7 @@ android {
     buildFeatures {
         buildConfig = true
         compose = true
+        resValues = true
     }
 }
 
@@ -63,6 +69,7 @@ dependencies {
     implementation(libs.ktor.client.okhttp)
     implementation(libs.ktor.serialization.kotlinx.json)
     implementation(libs.kotlinx.coroutines.android)
+    implementation("androidx.work:work-runtime-ktx:2.11.2")
 
     androidTestImplementation(libs.androidx.test.junit)
     androidTestImplementation(libs.junit)

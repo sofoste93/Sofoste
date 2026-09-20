@@ -1,6 +1,7 @@
 package de.sofoste.app.ui
 
 import android.app.Application
+import android.os.Build
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -24,6 +25,11 @@ import de.sofoste.app.data.remote.StudentApi
 import de.sofoste.app.data.repository.PublicRepository
 import de.sofoste.app.data.repository.AdminRepository
 import de.sofoste.app.data.repository.StudentRepository
+import de.sofoste.app.notifications.SecureDeviceTokenStorage
+import de.sofoste.app.notifications.TritonNotifications
+import de.sofoste.app.notifications.TritonPreferences
+import de.sofoste.app.notifications.TritonScheduler
+import de.sofoste.app.notifications.TritonSettings
 import java.util.Locale
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -66,6 +72,9 @@ data class StudentUiState(
     val activity: List<StudentActivityItem> = emptyList(),
     val billing: StudentBillingPayload? = null,
     val profile: StudentProfile? = null,
+    val notificationSettings: TritonSettings = TritonSettings(false, true, true, "en"),
+    val notificationBusy: Boolean = false,
+    val notificationError: Boolean = false,
     val busy: Boolean = false,
     val errorCode: String? = null,
 )
@@ -94,6 +103,8 @@ class SofosteViewModel(application: Application) : AndroidViewModel(application)
     private val publicRepository = PublicRepository(publicApi)
     private val studentApi = StudentApi(application)
     private val studentRepository = StudentRepository(studentApi)
+    private val notificationPreferences = TritonPreferences(application)
+    private val deviceTokenStorage = SecureDeviceTokenStorage(application)
     private val adminApi = AdminApi(application)
     private val adminRepository = AdminRepository(adminApi)
     private var publicJob: Job? = null
@@ -117,6 +128,42 @@ class SofosteViewModel(application: Application) : AndroidViewModel(application)
         state = state.copy(language = language)
         refresh()
         restoreIdentity()
+    }
+
+    fun setStudentNotifications(enabled: Boolean, activity: Boolean, agenda: Boolean) {
+        if (state.student.status != StudentSessionStatus.SignedIn) return
+        studentJob?.cancel()
+        studentJob = viewModelScope.launch {
+            state = state.copy(student = state.student.copy(notificationBusy = true, notificationError = false))
+            runCatching {
+                val effectiveEnabled = enabled && (activity || agenda)
+                if (effectiveEnabled) {
+                    if (deviceTokenStorage.get() == null) {
+                        val deviceName = listOf(Build.MANUFACTURER, Build.MODEL)
+                            .joinToString(" ").trim().take(120).ifBlank { "Android" }
+                        val registration = studentRepository.registerDevice(state.language.code, deviceName)
+                        deviceTokenStorage.put(registration.token)
+                    }
+                    val latestId = state.student.activity.maxOfOrNull { it.id.toLongOrNull() ?: 0L }
+                    notificationPreferences.latestActivityId(latestId?.toString())
+                    notificationPreferences.bindIdentity(state.student.profile?.email.orEmpty())
+                    notificationPreferences.save(true, activity, agenda, state.language.code)
+                    TritonNotifications.ensureChannel(getApplication(), state.language.code)
+                    TritonScheduler.schedule(getApplication())
+                } else {
+                    revokeNotificationDevice()
+                    notificationPreferences.save(false, activity, agenda, state.language.code)
+                    TritonScheduler.cancel(getApplication())
+                }
+            }.onSuccess {
+                state = state.copy(student = state.student.copy(
+                    notificationSettings = notificationPreferences.settings(),
+                    notificationBusy = false,
+                ))
+            }.onFailure {
+                state = state.copy(student = state.student.copy(notificationBusy = false, notificationError = true))
+            }
+        }
     }
 
     fun refresh() {
@@ -153,6 +200,9 @@ class SofosteViewModel(application: Application) : AndroidViewModel(application)
         studentJob = viewModelScope.launch {
             state = state.copy(student = state.student.copy(busy = true, errorCode = null))
             try {
+                revokeNotificationDevice()
+                notificationPreferences.disable()
+                TritonScheduler.cancel(getApplication())
                 studentRepository.logout(state.language.code)
             } finally {
                 state = state.copy(student = StudentUiState(status = StudentSessionStatus.SignedOut))
@@ -164,13 +214,13 @@ class SofosteViewModel(application: Application) : AndroidViewModel(application)
         state = state.copy(student = state.student.copy(errorCode = null))
     }
 
-    fun markStudentActivityRead(id: String) {
+    fun openStudentActivity() {
         if (state.student.status != StudentSessionStatus.SignedIn) return
+        if (state.student.activity.none { it.readAt == null }) return
         studentJob?.cancel()
         studentJob = viewModelScope.launch {
-            state = state.copy(student = state.student.copy(busy = true, errorCode = null))
             runCatching {
-                studentRepository.markActivityRead(state.language.code, id)
+                studentRepository.markAllActivityRead(state.language.code)
                 studentRepository.refresh(state.language.code)
             }
                 .onSuccess { applyStudentSession(it) }
@@ -178,12 +228,12 @@ class SofosteViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    fun rescheduleStudentAppointment(id: String, date: String, time: String) {
-        mutateStudent { studentRepository.rescheduleAppointment(state.language.code, id, date, time) }
+    fun rescheduleStudentAppointment(id: String, date: String, time: String, note: String) {
+        mutateStudent { studentRepository.rescheduleAppointment(state.language.code, id, date, time, note) }
     }
 
-    fun cancelStudentAppointment(id: String) {
-        mutateStudent { studentRepository.cancelAppointment(state.language.code, id) }
+    fun cancelStudentAppointment(id: String, note: String) {
+        mutateStudent { studentRepository.cancelAppointment(state.language.code, id, note) }
     }
 
     fun saveStudentProfile(displayName: String, preferredLanguage: String) {
@@ -193,7 +243,16 @@ class SofosteViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun changeStudentPassword(currentPassword: String, newPassword: String) {
-        mutateStudent { studentRepository.changePassword(state.language.code, currentPassword, newPassword) }
+        mutateStudent {
+            val changed = studentRepository.changePassword(state.language.code, currentPassword, newPassword)
+            if (changed && notificationPreferences.settings().enabled) {
+                deviceTokenStorage.clear()
+                val deviceName = listOf(Build.MANUFACTURER, Build.MODEL)
+                    .joinToString(" ").trim().take(120).ifBlank { "Android" }
+                deviceTokenStorage.put(studentRepository.registerDevice(state.language.code, deviceName).token)
+            }
+            changed
+        }
     }
 
     fun uploadStudentAvatar(bytes: ByteArray, mimeType: String) {
@@ -214,6 +273,8 @@ class SofosteViewModel(application: Application) : AndroidViewModel(application)
             state = state.copy(admin = state.admin.copy(busy = true, errorCode = null))
             runCatching { adminRepository.login(state.language.code, username, password) }
                 .onSuccess {
+                    revokeNotificationDevice()
+                    clearNotificationLocal()
                     studentRepository.clearLocalSession()
                     state = state.copy(student = StudentUiState(status = StudentSessionStatus.SignedOut))
                     applyAdminSession(it)
@@ -279,7 +340,10 @@ class SofosteViewModel(application: Application) : AndroidViewModel(application)
                     handleStudentFailure(it, keepDashboard = false)
                     state = state.copy(admin = AdminUiState(status = StudentSessionStatus.Checking))
                     runCatching { adminRepository.restore(state.language.code) }
-                        .onSuccess { applyAdminSession(it) }
+                        .onSuccess {
+                            clearNotificationLocal()
+                            applyAdminSession(it)
+                        }
                         .onFailure { error -> handleAdminFailure(error, false) }
                 }
         }
@@ -301,6 +365,10 @@ class SofosteViewModel(application: Application) : AndroidViewModel(application)
 
     private suspend fun applyStudentSession(session: StudentMePayload) {
         val language = state.language.code
+        val email = session.profile?.email.orEmpty()
+        if (deviceTokenStorage.get() != null && !notificationPreferences.matchesIdentity(email)) {
+            clearNotificationLocal()
+        }
         val avatar = if (session.overview.hasAvatar) runCatching {
             studentRepository.avatar(language)
         }.getOrNull() else null
@@ -315,8 +383,23 @@ class SofosteViewModel(application: Application) : AndroidViewModel(application)
                 activity = privateData.activity.items,
                 billing = privateData.billing,
                 profile = session.profile,
+                notificationSettings = notificationPreferences.settings(),
             ),
         )
+    }
+
+    private suspend fun revokeNotificationDevice() {
+        val token = deviceTokenStorage.get()
+        if (token != null) {
+            runCatching { studentRepository.revokeDevice(state.language.code, token) }
+        }
+        deviceTokenStorage.clear()
+    }
+
+    private fun clearNotificationLocal() {
+        deviceTokenStorage.clear()
+        notificationPreferences.disable()
+        TritonScheduler.cancel(getApplication())
     }
 
     private fun mutateStudent(request: suspend () -> Any) {

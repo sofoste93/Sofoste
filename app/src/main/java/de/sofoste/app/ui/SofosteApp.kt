@@ -1,8 +1,11 @@
 package de.sofoste.app.ui
 
 import android.graphics.BitmapFactory
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -44,9 +47,11 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -61,6 +66,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.core.content.ContextCompat
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.ImeAction
@@ -91,6 +97,7 @@ import de.sofoste.app.ui.theme.Panel
 import de.sofoste.app.ui.theme.Solar
 import de.sofoste.app.ui.theme.Starlight
 import de.sofoste.app.ui.theme.Void
+import de.sofoste.app.notifications.TritonSettings
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.io.ByteArrayOutputStream
@@ -220,6 +227,11 @@ private data class StudentCopy(
     val cancelAppointment: String,
     val saveAppointment: String,
     val cancelConfirm: String,
+    val appointmentMemo: String,
+    val cancellationMemo: String,
+    val schedulePlanned: String,
+    val scheduleRescheduled: String,
+    val scheduleCancelled: String,
     val appointmentClosed: String,
     val appointmentUnavailable: String,
     val personalTerms: String,
@@ -290,7 +302,7 @@ private fun studentCopy(language: AppLanguage): StudentCopy = when (language) {
         emptyLessons = "No lesson note has been shared yet.",
         emptyActivity = "No new classroom activity.",
         emptyPayments = "No payment reminder.",
-        planned = "Planned",
+        planned = "Confirmed",
         completed = "Completed",
         cancelled = "Cancelled",
         flexibleTime = "Time to be agreed",
@@ -306,6 +318,11 @@ private fun studentCopy(language: AppLanguage): StudentCopy = when (language) {
         cancelAppointment = "Cancel appointment",
         saveAppointment = "Save new time",
         cancelConfirm = "Cancel this appointment?",
+        appointmentMemo = "Short memo for Sofoste",
+        cancellationMemo = "Why are you cancelling? (optional)",
+        schedulePlanned = "New lesson orbit",
+        scheduleRescheduled = "Lesson rescheduled",
+        scheduleCancelled = "Lesson cancelled",
         appointmentClosed = "This appointment can no longer be changed.",
         appointmentUnavailable = "This time is no longer available. Choose another one.",
         personalTerms = "Personal terms",
@@ -374,7 +391,7 @@ private fun studentCopy(language: AppLanguage): StudentCopy = when (language) {
         emptyLessons = "Aucune note de cours n’a encore été partagée.",
         emptyActivity = "Aucune nouvelle activité dans la salle de classe.",
         emptyPayments = "Aucun rappel de règlement.",
-        planned = "Planifiée",
+        planned = "Confirmée",
         completed = "Terminée",
         cancelled = "Annulée",
         flexibleTime = "Heure à convenir",
@@ -390,6 +407,11 @@ private fun studentCopy(language: AppLanguage): StudentCopy = when (language) {
         cancelAppointment = "Annuler le rendez-vous",
         saveAppointment = "Enregistrer le nouveau créneau",
         cancelConfirm = "Annuler ce rendez-vous ?",
+        appointmentMemo = "Petit mémo pour Sofoste",
+        cancellationMemo = "Pourquoi annules-tu ? (facultatif)",
+        schedulePlanned = "Nouvelle orbite de cours",
+        scheduleRescheduled = "Cours déplacé",
+        scheduleCancelled = "Cours annulé",
         appointmentClosed = "Ce rendez-vous ne peut plus être modifié.",
         appointmentUnavailable = "Ce créneau n’est plus disponible. Choisis-en un autre.",
         personalTerms = "Conditions personnelles",
@@ -458,7 +480,7 @@ private fun studentCopy(language: AppLanguage): StudentCopy = when (language) {
         emptyLessons = "Noch wurden keine Unterrichtsnotizen geteilt.",
         emptyActivity = "Keine neue Aktivität im Lernraum.",
         emptyPayments = "Keine Zahlungserinnerung.",
-        planned = "Geplant",
+        planned = "Bestätigt",
         completed = "Abgeschlossen",
         cancelled = "Abgesagt",
         flexibleTime = "Uhrzeit nach Absprache",
@@ -474,6 +496,11 @@ private fun studentCopy(language: AppLanguage): StudentCopy = when (language) {
         cancelAppointment = "Termin absagen",
         saveAppointment = "Neuen Termin speichern",
         cancelConfirm = "Diesen Termin absagen?",
+        appointmentMemo = "Kurze Nachricht an Sofoste",
+        cancellationMemo = "Warum sagst du ab? (optional)",
+        schedulePlanned = "Neue Unterrichtsbahn",
+        scheduleRescheduled = "Termin verschoben",
+        scheduleCancelled = "Termin abgesagt",
         appointmentClosed = "Dieser Termin kann nicht mehr geändert werden.",
         appointmentUnavailable = "Dieser Termin ist nicht mehr verfügbar. Wähle einen anderen.",
         personalTerms = "Persönliche Konditionen",
@@ -510,6 +537,34 @@ private fun studentCopy(language: AppLanguage): StudentCopy = when (language) {
         throttled = "Zu viele Versuche. Bitte 15 Minuten warten.",
         invalidInput = "Bitte prüfe die eingegebenen Daten.",
         unavailable = "Das Signal des Lernraums ist vorübergehend nicht erreichbar.",
+    )
+}
+
+private data class TritonCopy(
+    val title: String,
+    val intro: String,
+    val enabled: String,
+    val activity: String,
+    val agenda: String,
+    val permissionDenied: String,
+    val unavailable: String,
+)
+
+private fun tritonCopy(language: AppLanguage): TritonCopy = when (language) {
+    AppLanguage.French -> TritonCopy(
+        "Signaux Triton", "Choisis les alertes privées reçues en arrière-plan. Les notes de cours ne sont jamais affichées sur l’écran verrouillé.",
+        "Autoriser les notifications", "Nouvelles activités et notes partagées", "Rappel de séance dans les 24 heures",
+        "Android doit autoriser les notifications pour activer Triton.", "Le signal Triton n’a pas pu être configuré. Réessaie dans un instant.",
+    )
+    AppLanguage.German -> TritonCopy(
+        "Triton-Signale", "Wähle private Hinweise im Hintergrund. Unterrichtsnotizen erscheinen nie auf dem Sperrbildschirm.",
+        "Benachrichtigungen erlauben", "Neue Aktivitäten und geteilte Notizen", "Terminerinnerung innerhalb von 24 Stunden",
+        "Android muss Benachrichtigungen erlauben, um Triton zu aktivieren.", "Das Triton-Signal konnte nicht eingerichtet werden. Versuche es gleich erneut.",
+    )
+    else -> TritonCopy(
+        "Triton signals", "Choose the private background alerts you receive. Lesson notes never appear on the lock screen.",
+        "Allow notifications", "New activity and shared notes", "Lesson reminder within 24 hours",
+        "Android must allow notifications before Triton can be enabled.", "The Triton signal could not be configured. Try again shortly.",
     )
 }
 
@@ -613,11 +668,14 @@ private fun adminCopy(language: AppLanguage): AdminCopy = when (language) {
 }
 
 @Composable
-fun SofosteApp(viewModel: SofosteViewModel = viewModel()) {
+fun SofosteApp(studentActivityRequest: Int = 0, viewModel: SofosteViewModel = viewModel()) {
     val state = viewModel.state
     val labels = copy(state.language)
     val studentLabels = studentCopy(state.language)
     val adminLabels = adminCopy(state.language)
+    LaunchedEffect(studentActivityRequest) {
+        if (studentActivityRequest > 0) viewModel.select(Destination.Student)
+    }
 
     Box(
         modifier = Modifier
@@ -670,7 +728,7 @@ fun SofosteApp(viewModel: SofosteViewModel = viewModel()) {
                     onActivate = viewModel::activateStudent,
                     onRefresh = viewModel::refreshStudent,
                     onLogout = viewModel::logoutStudent,
-                    onMarkActivityRead = viewModel::markStudentActivityRead,
+                    onOpenActivity = viewModel::openStudentActivity,
                     onRescheduleAppointment = viewModel::rescheduleStudentAppointment,
                     onCancelAppointment = viewModel::cancelStudentAppointment,
                     onSaveProfile = viewModel::saveStudentProfile,
@@ -678,6 +736,8 @@ fun SofosteApp(viewModel: SofosteViewModel = viewModel()) {
                     onUploadAvatar = viewModel::uploadStudentAvatar,
                     onRemoveAvatar = viewModel::removeStudentAvatar,
                     onClearError = viewModel::clearStudentError,
+                    onNotifications = viewModel::setStudentNotifications,
+                    activityRequest = studentActivityRequest,
                     modifier = Modifier.padding(padding),
                 )
                 state.loading && state.content == null -> LoadingSignal(Modifier.padding(padding))
@@ -1133,14 +1193,16 @@ private fun StudentOrbit(
     onActivate: (String, String, String) -> Unit,
     onRefresh: () -> Unit,
     onLogout: () -> Unit,
-    onMarkActivityRead: (String) -> Unit,
-    onRescheduleAppointment: (String, String, String) -> Unit,
-    onCancelAppointment: (String) -> Unit,
+    onOpenActivity: () -> Unit,
+    onRescheduleAppointment: (String, String, String, String) -> Unit,
+    onCancelAppointment: (String, String) -> Unit,
     onSaveProfile: (String, String) -> Unit,
     onChangePassword: (String, String) -> Unit,
     onUploadAvatar: (ByteArray, String) -> Unit,
     onRemoveAvatar: () -> Unit,
     onClearError: () -> Unit,
+    onNotifications: (Boolean, Boolean, Boolean) -> Unit,
+    activityRequest: Int,
     modifier: Modifier = Modifier,
 ) {
     when (state.status) {
@@ -1170,13 +1232,15 @@ private fun StudentOrbit(
             labels = labels,
             onRefresh = onRefresh,
             onLogout = onLogout,
-            onMarkActivityRead = onMarkActivityRead,
+            onOpenActivity = onOpenActivity,
             onRescheduleAppointment = onRescheduleAppointment,
             onCancelAppointment = onCancelAppointment,
             onSaveProfile = onSaveProfile,
             onChangePassword = onChangePassword,
             onUploadAvatar = onUploadAvatar,
             onRemoveAvatar = onRemoveAvatar,
+            onNotifications = onNotifications,
+            activityRequest = activityRequest,
             modifier = modifier,
         )
     }
@@ -1352,13 +1416,15 @@ private fun StudentDashboard(
     labels: StudentCopy,
     onRefresh: () -> Unit,
     onLogout: () -> Unit,
-    onMarkActivityRead: (String) -> Unit,
-    onRescheduleAppointment: (String, String, String) -> Unit,
-    onCancelAppointment: (String) -> Unit,
+    onOpenActivity: () -> Unit,
+    onRescheduleAppointment: (String, String, String, String) -> Unit,
+    onCancelAppointment: (String, String) -> Unit,
     onSaveProfile: (String, String) -> Unit,
     onChangePassword: (String, String) -> Unit,
     onUploadAvatar: (ByteArray, String) -> Unit,
     onRemoveAvatar: () -> Unit,
+    onNotifications: (Boolean, Boolean, Boolean) -> Unit,
+    activityRequest: Int,
     modifier: Modifier,
 ) {
     val overview = state.overview ?: return
@@ -1368,7 +1434,12 @@ private fun StudentDashboard(
             BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
         }
     }
-    var section by remember { mutableStateOf(StudentSection.Overview) }
+    var section by remember(activityRequest) {
+        mutableStateOf(if (activityRequest > 0) StudentSection.Activity else StudentSection.Overview)
+    }
+    LaunchedEffect(activityRequest) {
+        if (activityRequest > 0) onOpenActivity()
+    }
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
@@ -1403,7 +1474,7 @@ private fun StudentDashboard(
                     }
                 }
                 Column {
-                    ScreenTitle(labels.title)
+                    ScreenTitle(state.profile?.displayName ?: labels.title)
                     Text(
                         labels.secureSession,
                         color = Aurora,
@@ -1429,7 +1500,10 @@ private fun StudentDashboard(
                 StudentSection.entries.forEach { option ->
                     FilterChip(
                         selected = option == section,
-                        onClick = { section = option },
+                        onClick = {
+                            section = option
+                            if (option == StudentSection.Activity) onOpenActivity()
+                        },
                         label = { Text(studentSectionLabel(option, labels)) },
                     )
                 }
@@ -1442,6 +1516,12 @@ private fun StudentDashboard(
                 item { StudentMetric(labels.unread, overview.unread.toString(), Nebula) }
                 item { StudentMetric(labels.payments, overview.paymentsDue.toString(), Solar) }
                 item { StudentMetric(labels.amountDue, formatEuros(overview.amountDueCents, language), Orbit) }
+                state.agenda.firstOrNull { it.status == "planned" && it.canManage }?.let { next ->
+                    item {
+                        AgendaCard(next, language, labels, state.busy,
+                            onRescheduleAppointment, onCancelAppointment)
+                    }
+                }
             }
             StudentSection.Agenda -> {
                 if (state.agenda.isEmpty()) item { EmptyStudentSignal(labels.emptyAgenda) }
@@ -1456,7 +1536,7 @@ private fun StudentDashboard(
             StudentSection.Activity -> {
                 if (state.activity.isEmpty()) item { EmptyStudentSignal(labels.emptyActivity) }
                 items(state.activity, key = { it.id }) {
-                    ActivityCard(it, language, labels, onMarkActivityRead)
+                    ActivityCard(it, language, labels)
                 }
             }
             StudentSection.Payments -> {
@@ -1489,11 +1569,13 @@ private fun StudentDashboard(
             StudentSection.Profile -> item {
                 StudentProfilePanel(
                     state = state,
+                    language = language,
                     labels = labels,
                     onSaveProfile = onSaveProfile,
                     onChangePassword = onChangePassword,
                     onUploadAvatar = onUploadAvatar,
                     onRemoveAvatar = onRemoveAvatar,
+                    onNotifications = onNotifications,
                 )
             }
         }
@@ -1549,11 +1631,13 @@ private fun studentSectionLabel(section: StudentSection, labels: StudentCopy): S
 @Composable
 private fun StudentProfilePanel(
     state: StudentUiState,
+    language: AppLanguage,
     labels: StudentCopy,
     onSaveProfile: (String, String) -> Unit,
     onChangePassword: (String, String) -> Unit,
     onUploadAvatar: (ByteArray, String) -> Unit,
     onRemoveAvatar: () -> Unit,
+    onNotifications: (Boolean, Boolean, Boolean) -> Unit,
 ) {
     val profile = state.profile ?: return
     var displayName by remember(profile.displayName) { mutableStateOf(profile.displayName) }
@@ -1562,6 +1646,14 @@ private fun StudentProfilePanel(
     var newPassword by remember { mutableStateOf("") }
     var confirmation by remember { mutableStateOf("") }
     val context = LocalContext.current
+    val triton = tritonCopy(language)
+    var permissionDenied by remember { mutableStateOf(false) }
+    val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        permissionDenied = !granted
+        if (granted) {
+            onNotifications(true, state.notificationSettings.activity, state.notificationSettings.agenda)
+        }
+    }
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) {
             val mime = normalizedImageMime(context.contentResolver.getType(uri).orEmpty())
@@ -1611,6 +1703,39 @@ private fun StudentProfilePanel(
             ) { Text(labels.removePhoto) }
         }
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+        Text(triton.title, color = Starlight, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        Text(triton.intro, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        NotificationSettingRow(
+            label = triton.enabled,
+            checked = state.notificationSettings.enabled,
+            enabled = !state.notificationBusy,
+        ) { checked ->
+            permissionDenied = false
+            if (!checked) {
+                onNotifications(false, state.notificationSettings.activity, state.notificationSettings.agenda)
+            } else if (Build.VERSION.SDK_INT < 33 || ContextCompat.checkSelfPermission(
+                    context, Manifest.permission.POST_NOTIFICATIONS,
+                ) == PackageManager.PERMISSION_GRANTED
+            ) {
+                onNotifications(true, state.notificationSettings.activity, state.notificationSettings.agenda)
+            } else {
+                permission.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+        NotificationSettingRow(
+            label = triton.activity,
+            checked = state.notificationSettings.activity,
+            enabled = !state.notificationBusy,
+        ) { checked -> onNotifications(state.notificationSettings.enabled, checked, state.notificationSettings.agenda) }
+        NotificationSettingRow(
+            label = triton.agenda,
+            checked = state.notificationSettings.agenda,
+            enabled = !state.notificationBusy,
+        ) { checked -> onNotifications(state.notificationSettings.enabled, state.notificationSettings.activity, checked) }
+        if (state.notificationBusy) LinearSignal()
+        if (permissionDenied) Text(triton.permissionDenied, color = Solar, fontSize = 13.sp)
+        if (state.notificationError) Text(triton.unavailable, color = MaterialTheme.colorScheme.error, fontSize = 13.sp)
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
         OutlinedTextField(
             value = currentPassword,
             onValueChange = { currentPassword = it.take(72) },
@@ -1655,13 +1780,25 @@ private fun StudentProfilePanel(
 }
 
 @Composable
+private fun NotificationSettingRow(label: String, checked: Boolean, enabled: Boolean, onChange: (Boolean) -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(label, color = Starlight, modifier = Modifier.weight(1f).padding(end = 12.dp))
+        Switch(checked = checked, onCheckedChange = onChange, enabled = enabled)
+    }
+}
+
+@Composable
 private fun AgendaCard(
     item: StudentAgendaItem,
     language: AppLanguage,
     labels: StudentCopy,
     busy: Boolean,
-    onReschedule: (String, String, String) -> Unit,
-    onCancel: (String) -> Unit,
+    onReschedule: (String, String, String, String) -> Unit,
+    onCancel: (String, String) -> Unit,
 ) {
     val status = when (item.status) {
         "completed" -> labels.completed
@@ -1677,6 +1814,8 @@ private fun AgendaCard(
     var confirmCancel by remember(item.id) { mutableStateOf(false) }
     var date by remember(item.sessionDate) { mutableStateOf(item.sessionDate) }
     var time by remember(item.startTime) { mutableStateOf(item.startTime ?: "12:00") }
+    var note by remember(item.id) { mutableStateOf("") }
+    var cancellationNote by remember(item.id) { mutableStateOf("") }
     val context = LocalContext.current
     Surface(
         color = Panel.copy(alpha = 0.9f),
@@ -1695,6 +1834,9 @@ private fun AgendaCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(status.uppercase(), color = accent, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            item.studentNote?.takeIf { it.isNotBlank() }?.let {
+                LessonField(labels.appointmentMemo, it)
+            }
             if (item.canManage) {
                 if (editing) {
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -1712,8 +1854,15 @@ private fun AgendaCard(
                             }, parts.getOrElse(0) { 12 }, parts.getOrElse(1) { 0 }, true).show()
                         }) { Text("🕒 $time") }
                     }
+                    OutlinedTextField(
+                        value = note,
+                        onValueChange = { note = it.take(500) },
+                        label = { Text(labels.appointmentMemo) },
+                        minLines = 2,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
                     Button(
-                        onClick = { onReschedule(item.id, date, time); editing = false },
+                        onClick = { onReschedule(item.id, date, time, note); editing = false },
                         enabled = !busy,
                         modifier = Modifier.fillMaxWidth(),
                     ) { Text(labels.saveAppointment) }
@@ -1730,8 +1879,17 @@ private fun AgendaCard(
         AlertDialog(
             onDismissRequest = { confirmCancel = false },
             title = { Text(labels.cancelConfirm) },
+            text = {
+                OutlinedTextField(
+                    value = cancellationNote,
+                    onValueChange = { cancellationNote = it.take(500) },
+                    label = { Text(labels.cancellationMemo) },
+                    minLines = 3,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            },
             confirmButton = {
-                TextButton(onClick = { confirmCancel = false; onCancel(item.id) }) {
+                TextButton(onClick = { confirmCancel = false; onCancel(item.id, cancellationNote) }) {
                     Text(labels.cancelAppointment, color = MaterialTheme.colorScheme.error)
                 }
             },
@@ -1773,7 +1931,6 @@ private fun ActivityCard(
     item: StudentActivityItem,
     language: AppLanguage,
     labels: StudentCopy,
-    onMarkRead: (String) -> Unit,
 ) {
     val unread = item.readAt == null
     Surface(
@@ -1785,12 +1942,36 @@ private fun ActivityCard(
             modifier = Modifier.padding(18.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text(labels.lessonPublished, color = Starlight, fontWeight = FontWeight.Bold)
-            Text(item.title, color = Aurora, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
-            Text(localizedDate(item.sessionDate, language), color = MaterialTheme.colorScheme.onSurfaceVariant)
-            LessonField(labels.summary, item.summary)
-            LessonField(labels.progress, item.progress)
-            LessonField(labels.practice, item.practice)
+            if (item.type == "lesson_published") {
+                Text(labels.lessonPublished, color = Starlight, fontWeight = FontWeight.Bold)
+                Text(item.title, color = Aurora, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                Text(localizedDate(item.sessionDate, language), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                LessonField(labels.summary, item.summary)
+                LessonField(labels.progress, item.progress)
+                LessonField(labels.practice, item.practice)
+            } else {
+                val scheduleTitle = when (item.type) {
+                    "schedule_rescheduled" -> labels.scheduleRescheduled
+                    "schedule_cancelled" -> labels.scheduleCancelled
+                    else -> labels.schedulePlanned
+                }
+                Text(scheduleTitle, color = Starlight, fontWeight = FontWeight.Bold)
+                Text(
+                    buildString {
+                        append(localizedDate(item.sessionDate, language))
+                        item.startTime?.let { append(" · ").append(it) }
+                    },
+                    color = Aurora,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                if (item.type == "schedule_planned" && item.occurrenceCount > 1) {
+                    Text("${item.occurrenceCount} × 7 days", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                item.studentNote?.takeIf { it.isNotBlank() }?.let {
+                    LessonField(labels.appointmentMemo, it)
+                }
+            }
             Text(
                 localizedDate(item.createdAt.take(10), language),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -1802,9 +1983,6 @@ private fun ActivityCard(
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
             )
-            if (unread) {
-                TextButton(onClick = { onMarkRead(item.id) }) { Text(labels.markRead) }
-            }
         }
     }
 }
